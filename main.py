@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Path, HTTPException, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, computed_field
 from typing import Annotated, Literal
 import json
@@ -29,7 +30,7 @@ class Patient(BaseModel):
         elif self.bmi < 25:
             return 'Normal'
         elif self.bmi < 30:
-            return 'Normal'
+            return 'Overweight'
         else:
             return 'Obese'
 
@@ -38,6 +39,10 @@ def load_data():
         data = json.load(f)
 
     return data
+
+def save_data(data):
+    with open('patients.json','w') as f:
+        json.dump(data, f)
 
 @app.get("/")
 def hello():
@@ -60,10 +65,10 @@ def view_patient(patient_id: str = Path(..., description='ID of the patient in t
 
     if patient_id in data:
         return data[patient_id]
-    return HTTPException(status_code=404, detail='Patient not found')
+    raise HTTPException(status_code=404, detail='Patient not found')
 
 @app.get('/sort')
-def sort_patients(sort_by: str = Query(..., description='Sort on the basis of height, weight or bmi'), order: str = Query('acs', description='Sort in asc or desc order')):
+def sort_patients(sort_by: str = Query(..., description='Sort on the basis of height, weight or bmi'), order: str = Query('asc', description='Sort in asc or desc order')):
 
     valid_fields = ['height', 'weight','bmi']
 
@@ -83,3 +88,20 @@ def sort_patients(sort_by: str = Query(..., description='Sort on the basis of he
 
     return sorted_data
 
+@app.post('/create')
+def create_patient(patient: Patient):
+
+    #load existing data
+    data = load_data()
+
+    #check if the patient already exist
+    if patient.id in data:
+        raise HTTPException(status_code=400, detail='Patient already exists.')
+
+    # new patient add to the database
+    data[patient.id] = patient.model_dump(exclude=['id'])
+
+    # save into json file
+    save_data(data)
+
+    return JSONResponse(status_code=201, content={'Message':'Patient created successfully'})
