@@ -130,11 +130,8 @@ def update_patient(patient_id: str, patient_update: PatientUpdate):
 
     existing_patient_info.update(updated_patient_info)
 
-    # for key, value in updated_patient_info.items():
-    #     existing_patient_info[key] = value
-
     # existing_patient_info -> pydantic boject -> update bmi + verdict
-    # existing_patient_info['id'] = patient_id
+   
     patient_obj = Patient(**existing_patient_info)
 
     # pydantic boject -> dict
@@ -145,3 +142,18 @@ def update_patient(patient_id: str, patient_update: PatientUpdate):
     save_data(data)
 
     return JSONResponse(status_code=200, content={'message':'Patient updated'})
+
+
+@app.delete('/remove/{patient_id}')
+def delete_patient(patient_id: str):
+
+    data = load_data()
+
+    if patient_id not in data:
+        raise HTTPException(status_code=404, detail='Patient not found')
+    
+    del data[patient_id]
+
+    save_data(data)
+
+    return JSONResponse(status_code=204 ,content={'message':'patient deleted'})
